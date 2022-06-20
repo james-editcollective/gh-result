@@ -1,0 +1,61 @@
+version: '3.7'
+
+services:
+  gh-result-nginx:
+    container_name: gh-result-nginx
+    image: nginx
+    restart: always
+    # platform: linux/amd64/v8
+    volumes:
+      - ./etc/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - gh-socket:/tmp
+    networks:
+      - gh-result-net
+    depends_on:
+      - gh-result
+    ports:
+      - 80:80
+
+  gh-result:
+    container_name: gh-result
+    image: jinai08/gh-result:0.1
+    build: .
+    platform: linux/amd64
+    networks:
+      - gh-result-net
+    ports:
+      - 8000:8000
+    depends_on:
+      - gh-result-db
+    volumes:
+      - ./:/app
+      - gh-socket:/tmp
+    restart: always
+    environment:
+      - SQLALCHEMY_DATABASE_URL=${SQLALCHEMY_DATABASE_URL}
+    command: ['sh', './etc/docker-entrypoint.sh']
+
+  gh-result-db:
+    container_name: gh-result-db
+    image: postgres:14.3-alpine
+    platform: linux/amd64
+    networks:
+      - gh-result-net
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: gh_result
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: gh_result
+      TZ: Asia/Seoul
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+    
+
+networks:
+  gh-result-net:
+
+volumes:
+  pgdata:
+  gh-socket:
